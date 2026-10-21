@@ -4,7 +4,7 @@
 
 - [x] Mapear código, dependências, banco e fluxos atuais.
 - [x] Registrar linguagem de domínio e decisões confirmadas.
-- [ ] Criar especificação aprovada e critérios de aceitação.
+- [x] Criar especificação aprovada e critérios de aceitação.
 
 ## M1 — Núcleo confiável de ofertas
 
@@ -24,8 +24,7 @@
 
 ## M3 — Publicação
 
-- [ ] Criar documentação de instalação Linux/macOS/Windows.
-- [ ] Criar `.env.example` sem segredos e instruções de primeiro login.
-- [ ] Definir licença após confirmação do proprietário.
-- [ ] Inicializar repositório Git e revisar arquivos excluídos.
-
+- [x] Criar documentação de instalação Linux/macOS/Windows.
+- [x] Criar `.env.example` sem segredos e instruções de primeiro login.
+- [x] Definir licença MIT.
+- [x] Inicializar repositório Git, revisar arquivos excluídos e publicar no GitHub.

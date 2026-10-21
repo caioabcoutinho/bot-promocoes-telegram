@@ -4,7 +4,8 @@
 
 ## Current phase
 
-Discovery/brownfield mapping. Implementation has not started.
+MVP foundation implemented and published. Next work is runner cleanup and
+operational hardening.
 
 ## Confirmed decisions
 
@@ -23,7 +24,6 @@ Discovery/brownfield mapping. Implementation has not started.
 
 ## Observed blockers and risks
 
-- O diretório atual não é um repositório Git.
 - Há segredos locais no `.env`; eles não podem ser publicados e devem ser rotacionados
   se houver qualquer exposição.
 - Há três scripts de fase com fluxos divergentes; o bot de consulta e o monitor não
@@ -35,6 +35,12 @@ Discovery/brownfield mapping. Implementation has not started.
 
 ## Next decision
 
-Aprovar a especificação M1 antes de implementar. A licença do projeto ainda está
-pendente.
+Unificar `run_phase3.py` e `run_bot.py` em uma operação mais simples, adicionar
+testes de notificação e preparar CI/serviço de execução.
 
+## Published
+
+- Repository: https://github.com/caioabcoutinho/bot-promocoes-telegram
+- Default branch: `main`
+- License: MIT
+- Local commit: `7e1c6ea`
