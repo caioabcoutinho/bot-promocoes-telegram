@@ -50,15 +50,24 @@ async def handler(event):
         if is_recent_duplicate(product_id, price, url):
             logger.info("Oferta repetida suprimida: %s", product_name)
             continue
-        if save_promotion(product_id, price, store, url, coupon, chat_id, event.id):
-            delivered = await send_alert(
+        if save_promotion(
+            product_id,
+            price,
+            store,
+            url,
+            coupon,
+            chat_id,
+            event.id,
+            channel_name,
+        ):
+            delivered, notification_error = await send_alert(
                 product_name, price, store, url, coupon, channel_name
             )
             record_notification(
                 product_id,
                 url,
                 delivered,
-                None if delivered else "Telegram não confirmou a entrega",
+                notification_error,
             )
 
 async def main():

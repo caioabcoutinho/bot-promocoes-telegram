@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 async def send_alert(product_name, price, store, url, coupon=None, source=None):
     if not BOT_TOKEN or not USER_CHAT_ID:
         logger.error("BOT_TOKEN ou USER_CHAT_ID faltando")
-        return False
+        return False, "BOT_TOKEN ou USER_CHAT_ID faltando"
 
     # Se houver cupom, adiciona a linha no texto
     texto_cupom = f"\n🎟️ **Cupom:** `{coupon}`" if coupon else ""
@@ -36,8 +36,8 @@ async def send_alert(product_name, price, store, url, coupon=None, source=None):
                         response.status,
                         body[:500],
                     )
-                    return False
+                    return False, f"Telegram HTTP {response.status}: {body[:500]}"
     except (aiohttp.ClientError, asyncio.TimeoutError) as error:
         logger.error("Erro de rede ao enviar alerta: %s", error)
-        return False
-    return True
+        return False, f"Erro de rede: {error}"
+    return True, None

@@ -267,6 +267,7 @@ usando a mesma sessão. Nunca execute duas instâncias com os mesmos arquivos
 /bloqueialoja "Shopee"
 /desbloqueialoja "Shopee"
 /delloja "Shopee"
+/reenviar ID_DA_OFERTA
 ```
 
 ### Exemplos de produtos
@@ -297,12 +298,16 @@ Regras:
 - `/setalvo`: altera somente o preço-alvo de um produto.
 - `/delproduto`: remove o produto e seu monitoramento.
 - `/ofertas`: mostra ofertas salvas, origem da mensagem e confirmação do alerta.
+- `/reenviar ID_DA_OFERTA`: tenta enviar novamente uma oferta cujo alerta falhou.
 - `/lojas`: lista lojas permitidas e bloqueadas.
 - `/addloja`: cadastra nome, aliases e domínios de uma loja.
 - `/bloqueialoja`: impede alertas dessa loja para todos os produtos.
 - `/desbloqueialoja`: permite novamente uma loja.
 - `/delloja`: remove o cadastro da loja.
 - `/status`: mostra contagens de produtos, lojas, ofertas e matches.
+
+Em `/ofertas`, cada item recebe um ID. Use esse número com `/reenviar` quando o
+histórico mostrar uma falha detalhada no envio do alerta.
 
 Somente o `USER_CHAT_ID` configurado pode executar comandos. Lojas bloqueadas
 não geram alertas para nenhum produto. Lojas desconhecidas continuam permitidas.
@@ -318,6 +323,45 @@ python -m compileall -q run.py run_bot.py run_phase3.py src tests
 
 O banco é criado em `data/monitor.db`. Faça backup desse arquivo antes de
 atualizações. A inicialização aplica migrações idempotentes e preserva o histórico.
+
+## Teste pós-reinicialização
+
+Depois de configurar o serviço Linux, faça um reboot controlado:
+
+```bash
+sudo reboot
+```
+
+Após entrar novamente no sistema, aguarde alguns segundos e verifique:
+
+```bash
+systemctl --user is-enabled pc-promo-monitor.service
+systemctl --user is-active pc-promo-monitor.service
+systemctl --user status pc-promo-monitor.service
+journalctl --user -u pc-promo-monitor.service -n 80 --no-pager
+```
+
+Os dois primeiros comandos devem retornar `enabled` e `active`. O status deve
+mostrar `run.py`, `run_phase3.py` e `run_bot.py` no mesmo cgroup. Em seguida,
+envie `/status` ao bot e confirme que ele responde.
+
+## Instalador automático
+
+O projeto ainda usa instalação explícita para evitar executar comandos
+privilegiados ou assumir onde cada usuário clonará o repositório. Um instalador
+automático poderia:
+
+1. detectar o sistema operacional;
+2. criar o virtualenv e instalar dependências;
+3. validar o `.env`;
+4. criar o serviço no caminho real do projeto;
+5. habilitar e iniciar o serviço;
+6. verificar logs e mostrar instruções.
+
+No Linux, ele também poderia oferecer `loginctl enable-linger` com confirmação.
+No macOS, geraria um `LaunchAgent`; no Windows, uma tarefa do Agendador. Esse
+instalador deve ser opcional, pois usuários avançados podem preferir configurar
+o serviço manualmente.
 
 ## Licença
 

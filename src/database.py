@@ -3,8 +3,10 @@ from src.config import DB_PATH
 from src.stores import DEFAULT_STORES
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout = 10000")
+    conn.execute("PRAGMA journal_mode = WAL")
     return conn
 
 
@@ -40,6 +42,7 @@ def _migrate_promotion_url_constraint(cursor):
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             chat_id INTEGER,
             message_id INTEGER,
+            source_channel TEXT,
             notified_at DATETIME,
             notification_error TEXT,
             FOREIGN KEY(product_id) REFERENCES products(id),
@@ -75,6 +78,7 @@ def init_db():
     _add_column_if_missing(cursor, "raw_matches", "chat_id", "INTEGER")
     _add_column_if_missing(cursor, "promotions", "chat_id", "INTEGER")
     _add_column_if_missing(cursor, "promotions", "message_id", "INTEGER")
+    _add_column_if_missing(cursor, "promotions", "source_channel", "TEXT")
     _add_column_if_missing(cursor, "promotions", "notified_at", "DATETIME")
     _add_column_if_missing(cursor, "promotions", "notification_error", "TEXT")
     _migrate_promotion_url_constraint(cursor)
@@ -206,6 +210,7 @@ def save_promotion(
     coupon=None,
     chat_id=None,
     message_id=None,
+    source_channel=None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -213,9 +218,11 @@ def save_promotion(
     try:
         cursor.execute(
             """INSERT INTO promotions
-               (product_id, price, store, url, coupon, chat_id, message_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (product_id, price, store, url, coupon, chat_id, message_id),
+               (product_id, price, store, url, coupon, chat_id, message_id,
+                source_channel)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (product_id, price, store, url, coupon, chat_id, message_id,
+             source_channel),
         )
         conn.commit()
         saved = True
@@ -223,9 +230,19 @@ def save_promotion(
         cursor.execute(
             """UPDATE promotions
                SET price = ?, store = ?, coupon = ?, timestamp = CURRENT_TIMESTAMP,
-                   chat_id = ?, message_id = ?, notification_error = NULL
+                   chat_id = ?, message_id = ?, source_channel = ?,
+                   notification_error = NULL
                WHERE product_id = ? AND url = ?""",
-            (price, store, coupon, chat_id, message_id, product_id, url),
+            (
+                price,
+                store,
+                coupon,
+                chat_id,
+                message_id,
+                source_channel,
+                product_id,
+                url,
+            ),
         )
         conn.commit()
         saved = cursor.rowcount > 0
@@ -250,14 +267,45 @@ def is_recent_duplicate(product_id, price, url, minutes=30):
 def get_recent_promotions(limit=10):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''SELECT prod.name, prom.price, prom.store, prom.url, prom.coupon,
-        prom.timestamp, prom.chat_id, prom.message_id, prom.notified_at,
+    cursor.execute('''SELECT prom.id, prod.name, prom.price, prom.store, prom.url, prom.coupon,
+        prom.timestamp, prom.chat_id, prom.message_id, prom.source_channel,
+        prom.notified_at,
         prom.notification_error
         FROM promotions prom JOIN products prod ON prom.product_id = prod.id
         ORDER BY prom.timestamp DESC LIMIT ?''', (limit,))
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def get_promotion(promotion_id):
+    conn = get_connection()
+    try:
+        return conn.execute(
+            """SELECT prom.id, prod.name, prom.price, prom.store, prom.url,
+                      prom.coupon, prom.source_channel
+               FROM promotions prom
+               JOIN products prod ON prod.id = prom.product_id
+               WHERE prom.id = ?""",
+            (promotion_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def record_notification_by_id(promotion_id, success, error=None):
+    conn = get_connection()
+    try:
+        conn.execute(
+            """UPDATE promotions
+               SET notified_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE notified_at END,
+                   notification_error = ?
+               WHERE id = ?""",
+            (int(success), error, promotion_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def record_notification(product_id, url, success, error=None):

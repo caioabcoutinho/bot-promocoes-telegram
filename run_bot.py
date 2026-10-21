@@ -8,12 +8,15 @@ from src.database import (
     delete_product,
     delete_store,
     get_all_products,
+    get_promotion,
     get_recent_promotions,
     get_statistics,
     get_stores,
+    record_notification_by_id,
     set_store_blocked,
     update_target_price,
 )
+from src.notifier import send_alert
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -71,13 +74,19 @@ async def cmd_ofertas(event):
         
     msg = "🔥 **Últimas Ofertas Encontradas:**\n\n"
     for p in promos:
-        name, price, store, url, coupon, data, chat_id, message_id, notified_at, notification_error = p
+        promotion_id, name, price, store, url, coupon, data, chat_id, message_id, source_channel, notified_at, notification_error = p
         data_formatada = f"{data[8:10]}/{data[5:7]} {data[11:16]}"
         texto_cupom = f"🎟️ Cupom: `{coupon}`\n" if coupon else ""
         
-        origem = f"\n🆔 Mensagem: `{message_id}`" if message_id else ""
-        entrega = "✅ enviado" if notified_at else "⚠️ não confirmado"
-        msg += f"**{name}**\n💰 R$ {price:.2f} na {store}\n{texto_cupom}📅 {data_formatada}\n📨 Alerta: {entrega}{origem}\n🔗 [Acessar Loja]({url})\n\n"
+        origem = f"\n📣 Grupo: {source_channel}" if source_channel else ""
+        origem += f"\n🆔 Mensagem: `{message_id}`" if message_id else ""
+        if notified_at:
+            entrega = "✅ enviado"
+        elif notification_error:
+            entrega = f"⚠️ falhou: {notification_error}"
+        else:
+            entrega = "⚠️ não confirmado"
+        msg += f"🆔 Oferta `{promotion_id}`\n**{name}**\n💰 R$ {price:.2f} na {store}\n{texto_cupom}📅 {data_formatada}{origem}\n📨 Alerta: {entrega}\n🔗 [Acessar Loja]({url})\n\n"
         
     await event.reply(msg, link_preview=False)
 
@@ -97,6 +106,7 @@ async def cmd_ajuda(event):
         '`/desbloqueialoja "Nome"` libera novamente.\n'
         '`/delloja "Nome"` remove cadastro da loja.\n'
         '`/ofertas` mostra o histórico e o estado de entrega.\n'
+        '`/reenviar ID` tenta enviar novamente um alerta com falha.\n'
         '`/status` mostra estatísticas do banco.'
     )
 
@@ -124,6 +134,34 @@ async def cmd_status(event):
         f"Ofertas salvas: {stats['promotions']}\n"
         f"Matches capturados: {stats['matches']}"
     )
+
+
+@bot.on(events.NewMessage(pattern=r'/reenviar'))
+@owner_only
+async def cmd_reenviar(event):
+    import re
+
+    match = re.fullmatch(r"/reenviar\s+(\d+)", event.raw_text.strip())
+    if not match:
+        await event.reply("⚠️ Use: `/reenviar ID_DA_OFERTA` (consulte `/ofertas`).")
+        return
+
+    promotion = get_promotion(int(match.group(1)))
+    if not promotion:
+        await event.reply("❌ Oferta não encontrada.")
+        return
+
+    promotion_id, name, price, store, url, coupon, source_channel = promotion
+    delivered, notification_error = await send_alert(
+        name, price, store, url, coupon, source_channel
+    )
+    record_notification_by_id(promotion_id, delivered, notification_error)
+    if delivered:
+        await event.reply(f"✅ Oferta `{promotion_id}` reenviada com sucesso.")
+    else:
+        await event.reply(
+            f"❌ Reenvio falhou: {notification_error or 'erro desconhecido'}"
+        )
 
 logger.info("Bot de consulta iniciado! Vá no Telegram e mande /start para ele.")
 
