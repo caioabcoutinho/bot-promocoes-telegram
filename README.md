@@ -293,7 +293,8 @@ Regras:
 
 - `/start`: mostra um resumo dos comandos.
 - `/ajuda`: mostra formatos e exemplos detalhados.
-- `/produtos`: lista produtos, palavras configuradas e preços-alvo.
+- `/produtos`: lista todos os produtos monitorados, suas palavras-chave e
+  preços-alvo. Use para conferir o que o bot está procurando.
 - `/addproduto`: cadastra um produto monitorado.
 - `/setalvo`: altera somente o preço-alvo de um produto.
 - `/delproduto`: remove o produto e seu monitoramento.

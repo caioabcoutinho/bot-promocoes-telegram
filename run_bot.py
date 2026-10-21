@@ -43,7 +43,7 @@ async def cmd_start(event):
         "🤖 **Buscador PC Gamer Ativo!**\n\n"
         "Comandos disponíveis:\n"
         "ℹ️ `/ajuda` - Ver ajuda completa\n"
-        "🛒 `/produtos` - Ver alvos cadastrados\n"
+        "🛒 `/produtos` - Listar produtos monitorados, palavras-chave e preços-alvo\n"
         "🔥 `/ofertas` - Ver últimas ofertas\n"
         "🏪 `/lojas` - Ver lojas e bloqueios\n"
         "📊 `/status` - Ver estado do monitor"
@@ -96,6 +96,10 @@ async def cmd_ofertas(event):
 async def cmd_ajuda(event):
     await event.reply(
         '📖 **Ajuda**\n\n'
+        '`/produtos` lista todos os produtos monitorados, suas palavras-chave, '
+        'exclusões e preços-alvo.\n'
+        'Use esse comando para conferir exatamente o que o bot está procurando '
+        'antes de alterar ou remover um produto.\n\n'
         '`/addproduto "Ryzen 7 9800X3D" "9800x3d,ryzen 7 9800x3d" "usado,kit" 3500`\n'
         'Nome entre aspas; palavras-chave separadas por vírgula; exclusões entre aspas; preço em reais.\n\n'
         '`/setalvo "Nome" 3000` altera o preço-alvo.\n'
