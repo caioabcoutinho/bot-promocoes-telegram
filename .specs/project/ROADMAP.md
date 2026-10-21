@@ -8,19 +8,19 @@
 
 ## M1 — Núcleo confiável de ofertas
 
-- [ ] Unificar o runner de captura em um fluxo único.
-- [ ] Corrigir parsing de preço à vista e parcelado.
-- [ ] Melhorar matching, normalização e exclusões.
-- [ ] Identificar lojas por domínio/aliases e aplicar bloqueio global.
-- [ ] Persistir origem, mensagem e estado de notificação.
-- [ ] Suprimir repetidas por 30 minutos.
+- [x] Unificar o runner de captura em um supervisor único.
+- [x] Corrigir parsing de preço à vista e parcelado.
+- [x] Melhorar matching, normalização e exclusões.
+- [x] Identificar lojas por domínio/aliases e aplicar bloqueio global.
+- [x] Persistir origem, mensagem e estado de notificação.
+- [x] Suprimir repetidas por 30 minutos.
 
 ## M2 — Operação segura e configurável
 
-- [ ] Restringir comandos ao proprietário.
-- [ ] Adicionar comandos para produtos e lojas.
-- [ ] Tratar falhas do Telegram com logs e estado explícitos.
-- [ ] Adicionar testes automatizados para extrator, matcher e regras de alerta.
+- [x] Restringir comandos ao proprietário.
+- [x] Adicionar comandos para produtos e lojas.
+- [x] Tratar falhas do Telegram com logs e estado explícitos.
+- [x] Adicionar testes automatizados para extrator, matcher e regras de alerta.
 
 ## M3 — Publicação
 

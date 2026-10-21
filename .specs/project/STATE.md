@@ -4,8 +4,8 @@
 
 ## Current phase
 
-MVP foundation implemented and published. Next work is runner cleanup and
-operational hardening.
+MVP foundation implemented and published. The local Linux user service is
+installed, enabled, persistent across logout, and currently active.
 
 ## Confirmed decisions
 
@@ -26,21 +26,22 @@ operational hardening.
 
 - Há segredos locais no `.env`; eles não podem ser publicados e devem ser rotacionados
   se houver qualquer exposição.
-- Há três scripts de fase com fluxos divergentes; o bot de consulta e o monitor não
-  são um único processo.
-- `run_phase2.py` desempacota três valores de uma função que retorna quatro.
-- `requirements.txt` não declara `aiohttp`, embora o notificador o importe.
-- O parser atual pode interpretar parcelas como preço total.
-- A URL da promoção é única no banco inteiro, não por produto.
+- `run_phase1.py` e `run_phase2.py` permanecem como scripts históricos e podem
+  confundir usuários que não leiam o README.
+- Não existe CI no GitHub para validar pull requests automaticamente.
+- Ainda não há testes de integração do Telegram nem testes do conteúdo enviado
+  pelo notificador.
+- O serviço instalado localmente aponta para o caminho real da máquina; o arquivo
+  versionado é um template que precisa ser ajustado ao caminho de cada instalação.
 
 ## Next decision
 
-Unificar `run_phase3.py` e `run_bot.py` em uma operação mais simples, adicionar
-testes de notificação e preparar CI/serviço de execução.
+Decidir se os scripts históricos devem ser removidos ou movidos para
+`legacy/`; depois adicionar CI, testes de notificação e uma rotina de release.
 
 ## Published
 
 - Repository: https://github.com/caioabcoutinho/bot-promocoes-telegram
 - Default branch: `main`
 - License: MIT
-- Local commit: `7e1c6ea`
+- Local commit: `37e92ed`
