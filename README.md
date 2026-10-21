@@ -156,23 +156,85 @@ systemctl --user status pc-promo-monitor.service
 journalctl --user -u pc-promo-monitor.service -f
 ```
 
-Para o serviço continuar após logout em um servidor:
+#### Comandos essenciais
+
+```bash
+# Habilitar inicialização automática
+systemctl --user enable pc-promo-monitor.service
+
+# Habilitar e iniciar agora
+systemctl --user enable --now pc-promo-monitor.service
+
+# Iniciar manualmente
+systemctl --user start pc-promo-monitor.service
+
+# Parar o bot
+systemctl --user stop pc-promo-monitor.service
+
+# Reiniciar o bot
+systemctl --user restart pc-promo-monitor.service
+
+# Verificar status
+systemctl --user status pc-promo-monitor.service
+
+# Verificar se a inicialização automática está habilitada
+systemctl --user is-enabled pc-promo-monitor.service
+
+# Desabilitar inicialização automática
+systemctl --user disable pc-promo-monitor.service
+
+# Logs em tempo real
+journalctl --user -u pc-promo-monitor.service -f
+
+# Logs recentes, sem pager
+journalctl --user -u pc-promo-monitor.service -n 100 --no-pager
+```
+
+O comando normalmente usado na primeira configuração é:
+
+```bash
+systemctl --user enable --now pc-promo-monitor.service
+```
+
+`enable` grava a inicialização automática; `start` inicia somente agora;
+`enable --now` faz as duas coisas. `disable` remove a inicialização automática,
+mas não para um serviço que já esteja rodando — use `stop` se quiser fazer os
+dois.
+
+Para o serviço continuar após logout e iniciar mesmo antes de abrir a sessão
+gráfica:
 
 ```bash
 loginctl enable-linger "$USER"
 ```
 
-Comandos úteis:
+Confirme:
 
 ```bash
-systemctl --user start pc-promo-monitor.service
-systemctl --user stop pc-promo-monitor.service
-systemctl --user restart pc-promo-monitor.service
-systemctl --user enable pc-promo-monitor.service
-systemctl --user disable pc-promo-monitor.service
-systemctl --user status pc-promo-monitor.service
-journalctl --user -u pc-promo-monitor.service -f
+loginctl show-user "$USER" -p Linger
 ```
+
+O resultado esperado é `Linger=yes`. Sem `linger`, o serviço normalmente inicia
+quando você faz login; com `linger`, o systemd do usuário pode iniciar e manter
+o bot no boot, mesmo sem uma sessão gráfica aberta.
+
+### Por que usar inicialização automática?
+
+- o monitor começa junto com o computador, sem abrir terminal;
+- o bot continua em segundo plano;
+- o systemd reinicia o supervisor se ele falhar;
+- logs ficam centralizados no journal;
+- o processo roda no seu usuário, sem precisar de `sudo` ou permissões de root;
+- você pode controlar tudo com `status`, `restart`, `stop` e `journalctl`.
+
+### Cuidados
+
+- não execute `python run.py` manualmente enquanto o serviço estiver ativo;
+- não execute `run_bot.py` ou `run_phase3.py` em paralelo com `run.py`;
+- duas instâncias usam os mesmos arquivos `.session` e podem causar
+  `sqlite3.OperationalError: database is locked`;
+- após editar código ou o `.env`, use `restart`;
+- após editar o arquivo `.service`, use `daemon-reload` e depois `restart`.
 
 `sudo systemctl enable pc-monitor pc-bot`, `sudo journalctl -u pc-monitor -f`
 e `sudo systemctl status pc-monitor pc-bot` só são válidos se você tiver criado
