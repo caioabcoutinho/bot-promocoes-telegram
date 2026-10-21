@@ -1,9 +1,7 @@
-import os
 import logging
 from functools import wraps
 from telethon import TelegramClient, events
-from dotenv import load_dotenv
-from src.config import API_ID, API_HASH, USER_CHAT_ID
+from src.config import API_ID, API_HASH, BOT_TOKEN, USER_CHAT_ID, validate_configuration
 from src.database import (
     add_product,
     add_store,
@@ -11,12 +9,11 @@ from src.database import (
     delete_store,
     get_all_products,
     get_recent_promotions,
+    get_statistics,
+    get_stores,
     set_store_blocked,
     update_target_price,
 )
-
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -33,7 +30,7 @@ def owner_only(handler):
     return guarded
 
 
-# Inicia o cliente como Bot (cria o arquivo bot_session.session)
+validate_configuration()
 bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 @bot.on(events.NewMessage(pattern='/start'))
@@ -42,8 +39,11 @@ async def cmd_start(event):
     texto = (
         "🤖 **Buscador PC Gamer Ativo!**\n\n"
         "Comandos disponíveis:\n"
+        "ℹ️ `/ajuda` - Ver ajuda completa\n"
         "🛒 `/produtos` - Ver alvos cadastrados\n"
-        "🔥 `/ofertas` - Ver últimas 10 promoções salvas"
+        "🔥 `/ofertas` - Ver últimas ofertas\n"
+        "🏪 `/lojas` - Ver lojas e bloqueios\n"
+        "📊 `/status` - Ver estado do monitor"
     )
     await event.reply(texto)
 
@@ -57,7 +57,8 @@ async def cmd_produtos(event):
         
     msg = "📦 **Produtos Monitorados:**\n\n"
     for p in prods:
-        msg += f"• **{p['name']}** (Alvo: R$ {p['target_price']:.2f})\n"
+        keywords = ", ".join(p["keywords"])
+        msg += f"• **{p['name']}** (Alvo: R$ {p['target_price']:.2f})\n  🔍 {keywords}\n"
     await event.reply(msg)
 
 @bot.on(events.NewMessage(pattern='/ofertas'))
@@ -70,13 +71,59 @@ async def cmd_ofertas(event):
         
     msg = "🔥 **Últimas Ofertas Encontradas:**\n\n"
     for p in promos:
-        name, price, store, url, coupon, data = p
+        name, price, store, url, coupon, data, chat_id, message_id, notified_at, notification_error = p
         data_formatada = f"{data[8:10]}/{data[5:7]} {data[11:16]}"
         texto_cupom = f"🎟️ Cupom: `{coupon}`\n" if coupon else ""
         
-        msg += f"**{name}**\n💰 R$ {price:.2f} na {store}\n{texto_cupom}📅 {data_formatada}\n🔗 [Acessar Loja]({url})\n\n"
+        origem = f"\n🆔 Mensagem: `{message_id}`" if message_id else ""
+        entrega = "✅ enviado" if notified_at else "⚠️ não confirmado"
+        msg += f"**{name}**\n💰 R$ {price:.2f} na {store}\n{texto_cupom}📅 {data_formatada}\n📨 Alerta: {entrega}{origem}\n🔗 [Acessar Loja]({url})\n\n"
         
     await event.reply(msg, link_preview=False)
+
+
+@bot.on(events.NewMessage(pattern=r'/ajuda'))
+@owner_only
+async def cmd_ajuda(event):
+    await event.reply(
+        '📖 **Ajuda**\n\n'
+        '`/addproduto "Ryzen 7 9800X3D" "9800x3d,ryzen 7 9800x3d" "usado,kit" 3500`\n'
+        'Nome entre aspas; palavras-chave separadas por vírgula; exclusões entre aspas; preço em reais.\n\n'
+        '`/setalvo "Nome" 3000` altera o preço-alvo.\n'
+        '`/delproduto "Nome"` remove um produto.\n'
+        '`/lojas` lista lojas cadastradas e bloqueios.\n'
+        '`/addloja "Nome" "alias1,alias2" "dominio.com"` cadastra loja.\n'
+        '`/bloqueialoja "Nome"` bloqueia globalmente.\n'
+        '`/desbloqueialoja "Nome"` libera novamente.\n'
+        '`/delloja "Nome"` remove cadastro da loja.\n'
+        '`/ofertas` mostra o histórico e o estado de entrega.\n'
+        '`/status` mostra estatísticas do banco.'
+    )
+
+
+@bot.on(events.NewMessage(pattern=r'/lojas'))
+@owner_only
+async def cmd_lojas(event):
+    stores = get_stores()
+    msg = "🏪 **Lojas cadastradas:**\n\n"
+    msg += "\n".join(
+        f"• {name} — {'🚫 bloqueada' if blocked else '✅ permitida'}"
+        for name, _, _, blocked in stores
+    ) or "Nenhuma loja cadastrada."
+    await event.reply(msg)
+
+
+@bot.on(events.NewMessage(pattern=r'/status'))
+@owner_only
+async def cmd_status(event):
+    stats = get_statistics()
+    await event.reply(
+        "📊 **Status do monitor**\n\n"
+        f"Produtos: {stats['products']}\n"
+        f"Lojas: {stats['stores']} ({stats['blocked_stores']} bloqueadas)\n"
+        f"Ofertas salvas: {stats['promotions']}\n"
+        f"Matches capturados: {stats['matches']}"
+    )
 
 logger.info("Bot de consulta iniciado! Vá no Telegram e mande /start para ele.")
 

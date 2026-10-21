@@ -21,6 +21,28 @@ como informação. Preços no formato `R$ 200,00 x 10` são interpretados como
 - Um bot criado pelo [@BotFather](https://t.me/BotFather)
 - `API_ID` e `API_HASH` obtidos em <https://my.telegram.org>
 
+## Configuração do Telegram
+
+### Criar o bot de alertas
+
+1. Abra o Telegram e converse com [@BotFather](https://t.me/BotFather).
+2. Envie `/newbot`.
+3. Escolha o nome exibido e um username terminado em `bot`.
+4. Copie o token retornado para `BOT_TOKEN` no `.env`.
+5. Nunca publique esse token. Se ele vazar, use `/revoke` no BotFather e atualize
+   o `.env`.
+
+### Obter API_ID e API_HASH
+
+1. Acesse <https://my.telegram.org> com sua conta pessoal.
+2. Abra **API development tools**.
+3. Crie uma aplicação, se ainda não existir.
+4. Copie `api_id` para `API_ID` e `api_hash` para `API_HASH`.
+
+Essas credenciais são da sua conta de usuário, usada para ler os grupos/canais.
+O bot criado no BotFather é usado para comandos e alertas; ele não substitui a
+conta de usuário para ler grupos privados.
+
 ## Instalação
 
 ### Linux/macOS
@@ -52,6 +74,34 @@ Preencha `.env`:
 - `BOT_TOKEN`: token do bot criado no BotFather.
 - `USER_CHAT_ID`: seu ID numérico no Telegram.
 
+`CHANNELS` é obrigatório. Informe os usernames dos grupos/canais que você quer
+monitorar, separados por vírgula, incluindo o `@`. A conta usada no primeiro
+login precisa ser membro desses grupos/canais. Links privados sem username não
+podem ser colocados diretamente nessa lista; nesse caso, use o identificador
+aceito pelo Telethon depois de entrar no grupo.
+
+Sugestão de canais para promoções de PC gamer, baseada na configuração original
+deste projeto:
+
+```dotenv
+CHANNELS=@peperaiohardware,@mmpromo,@HardTecPromocoes,@hardwareofertas,@soplacadevideo,@sopromodecpu
+```
+
+Exemplo completo, sem valores reais:
+
+```dotenv
+API_ID=12345678
+API_HASH=seu_api_hash
+CHANNELS=@peperaiohardware,@mmpromo,@HardTecPromocoes
+BOT_TOKEN=123456:seu_token_do_bot
+USER_CHAT_ID=123456789
+```
+
+O `USER_CHAT_ID` é o ID numérico do seu chat pessoal com o bot. Envie `/start`
+ao bot e use um bot de consulta de ID ou uma ferramenta equivalente para
+descobri-lo. O valor deve ser o seu chat privado, pois os comandos são
+rejeitados para outros usuários.
+
 Na primeira execução, o Telethon solicitará telefone, código e, se ativado,
 senha de 2FA. Isso criará `user_session.session`. O bot usa uma sessão separada.
 Nunca publique `.env` ou arquivos `.session`.
@@ -78,8 +128,9 @@ python run_bot.py     # somente comandos e consulta
 ```
 
 Não execute `run_phase3.py` e `run.py` ao mesmo tempo: isso duplica a captura.
-Os scripts `run_phase1.py` e `run_phase2.py` são históricos e não devem ser
-usados na operação normal.
+O monitor recarrega produtos e lojas do SQLite a cada mensagem. Portanto, depois
+de usar comandos como `/addproduto` ou `/bloqueialoja`, não é necessário reiniciar
+o serviço.
 
 ## Execução automática
 
@@ -188,7 +239,7 @@ Não use `sudo` no Windows e não instale o bot como administrador sem necessida
 ## Operação e troubleshooting
 
 ```bash
-# validar configuração sem iniciar conexão
+# validar os arquivos sem iniciar conexão
 python -m compileall -q run.py run_bot.py run_phase3.py src
 
 # conferir testes
@@ -218,6 +269,41 @@ usando a mesma sessão. Nunca execute duas instâncias com os mesmos arquivos
 /delloja "Shopee"
 ```
 
+### Exemplos de produtos
+
+```text
+/addproduto "Ryzen 7 9800X3D" "ryzen 7 9800x3d,9800x3d" "usado,kit,9800x" 3500
+/addproduto "RTX 4070 Super" "rtx 4070 super,4070 super,4070s" "usada,ti" 3800
+/addproduto "Memória DDR5 32GB" "ddr5 32gb,2x16gb ddr5,memoria ddr5" "" 700
+```
+
+Regras:
+
+- O nome é apenas uma identificação para você e deve ficar entre aspas.
+- As palavras-chave ficam em uma única string entre aspas e são separadas por
+  vírgulas; qualquer uma delas pode ativar o produto.
+- As palavras proibidas ficam em outra string entre aspas e também são separadas
+  por vírgulas; se uma aparecer, o produto é ignorado.
+- O preço-alvo é o maior preço anunciado que deve gerar alerta.
+- Use ponto ou vírgula decimal conforme a versão instalada; exemplos simples
+  usam números inteiros.
+
+### O que cada comando faz
+
+- `/start`: mostra um resumo dos comandos.
+- `/ajuda`: mostra formatos e exemplos detalhados.
+- `/produtos`: lista produtos, palavras configuradas e preços-alvo.
+- `/addproduto`: cadastra um produto monitorado.
+- `/setalvo`: altera somente o preço-alvo de um produto.
+- `/delproduto`: remove o produto e seu monitoramento.
+- `/ofertas`: mostra ofertas salvas, origem da mensagem e confirmação do alerta.
+- `/lojas`: lista lojas permitidas e bloqueadas.
+- `/addloja`: cadastra nome, aliases e domínios de uma loja.
+- `/bloqueialoja`: impede alertas dessa loja para todos os produtos.
+- `/desbloqueialoja`: permite novamente uma loja.
+- `/delloja`: remove o cadastro da loja.
+- `/status`: mostra contagens de produtos, lojas, ofertas e matches.
+
 Somente o `USER_CHAT_ID` configurado pode executar comandos. Lojas bloqueadas
 não geram alertas para nenhum produto. Lojas desconhecidas continuam permitidas.
 
@@ -225,7 +311,7 @@ não geram alertas para nenhum produto. Lojas desconhecidas continuam permitidas
 
 ```bash
 python -m pytest -q tests
-python -m compileall -q run_bot.py run_phase3.py src tests
+python -m compileall -q run.py run_bot.py run_phase3.py src tests
 ```
 
 ## Dados locais

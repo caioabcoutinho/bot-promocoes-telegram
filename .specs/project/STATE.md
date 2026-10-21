@@ -26,22 +26,19 @@ installed, enabled, persistent across logout, and currently active.
 
 - Há segredos locais no `.env`; eles não podem ser publicados e devem ser rotacionados
   se houver qualquer exposição.
-- `run_phase1.py` e `run_phase2.py` permanecem como scripts históricos e podem
-  confundir usuários que não leiam o README.
 - Não existe CI no GitHub para validar pull requests automaticamente.
-- Ainda não há testes de integração do Telegram nem testes do conteúdo enviado
-  pelo notificador.
+- Ainda não há testes de integração do Telegram.
 - O serviço instalado localmente aponta para o caminho real da máquina; o arquivo
   versionado é um template que precisa ser ajustado ao caminho de cada instalação.
 
 ## Next decision
 
-Decidir se os scripts históricos devem ser removidos ou movidos para
-`legacy/`; depois adicionar CI, testes de notificação e uma rotina de release.
+Adicionar CI e testes de integração somente quando o MVP precisar de uma barreira
+de regressão maior; em seguida preparar uma rotina de release.
 
 ## Published
 
 - Repository: https://github.com/caioabcoutinho/bot-promocoes-telegram
 - Default branch: `main`
 - License: MIT
-- Local commit: `37e92ed`
+- Local commit: será atualizado após esta mudança.

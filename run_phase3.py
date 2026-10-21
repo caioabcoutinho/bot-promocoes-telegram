@@ -1,6 +1,6 @@
 import logging
 from telethon import TelegramClient, events
-from src.config import API_ID, API_HASH, CHANNELS
+from src.config import API_ID, API_HASH, CHANNELS, validate_configuration
 from src.database import (
     get_all_products,
     get_stores,
@@ -8,6 +8,7 @@ from src.database import (
     is_recent_duplicate,
     save_promotion,
     save_raw_match,
+    record_notification,
 )
 from src.matcher import find_matching_products
 from src.extractor import identify_store, parse_message
@@ -16,8 +17,8 @@ from src.notifier import send_alert
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+validate_configuration()
 init_db()
-PRODUCTS = get_all_products()
 logger.info("Monitorando produtos. Aguardando ofertas...")
 
 client = TelegramClient('user_session', API_ID, API_HASH)
@@ -28,7 +29,8 @@ async def handler(event):
     if not msg_text:
         return
 
-    matches = find_matching_products(msg_text, PRODUCTS)
+    products = get_all_products()
+    matches = find_matching_products(msg_text, products)
     if not matches:
         return
 
@@ -42,15 +44,21 @@ async def handler(event):
         save_raw_match(product_id, channel_name, msg_text, chat_id, event.id)
         if blocked or price is None or url is None:
             continue
-        product = next(product for product in PRODUCTS if product["id"] == product_id)
+        product = next(product for product in products if product["id"] == product_id)
         if price > product["target_price"]:
             continue
         if is_recent_duplicate(product_id, price, url):
             logger.info("Oferta repetida suprimida: %s", product_name)
             continue
         if save_promotion(product_id, price, store, url, coupon, chat_id, event.id):
-            await send_alert(
+            delivered = await send_alert(
                 product_name, price, store, url, coupon, channel_name
+            )
+            record_notification(
+                product_id,
+                url,
+                delivered,
+                None if delivered else "Telegram não confirmou a entrega",
             )
 
 async def main():

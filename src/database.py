@@ -16,7 +16,17 @@ def _add_column_if_missing(cursor, table, column, definition):
 
 def _migrate_promotion_url_constraint(cursor):
     unique_indexes = cursor.execute("PRAGMA index_list(promotions)").fetchall()
-    if not any(row[2] for row in unique_indexes):
+    has_url_only_unique_index = False
+    for index in unique_indexes:
+        if not index[2]:
+            continue
+        columns = [
+            row[2] for row in cursor.execute(f"PRAGMA index_info({index[1]})")
+        ]
+        if columns == ["url"]:
+            has_url_only_unique_index = True
+            break
+    if not has_url_only_unique_index:
         return
     cursor.execute("PRAGMA foreign_keys = OFF")
     cursor.execute(
@@ -83,8 +93,9 @@ def add_product(name, keywords, exclude_words, target_price, max_price):
     try:
         cursor.execute('INSERT INTO products (name, keywords, exclude_words, target_price, max_price) VALUES (?, ?, ?, ?, ?)', (name, keywords, exclude_words, target_price, max_price))
         conn.commit()
+        return True
     except sqlite3.IntegrityError:
-        pass
+        return False
     finally:
         conn.close()
 
@@ -239,7 +250,42 @@ def is_recent_duplicate(product_id, price, url, minutes=30):
 def get_recent_promotions(limit=10):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''SELECT prod.name, prom.price, prom.store, prom.url, prom.coupon, prom.timestamp FROM promotions prom JOIN products prod ON prom.product_id = prod.id ORDER BY prom.timestamp DESC LIMIT ?''', (limit,))
+    cursor.execute('''SELECT prod.name, prom.price, prom.store, prom.url, prom.coupon,
+        prom.timestamp, prom.chat_id, prom.message_id, prom.notified_at,
+        prom.notification_error
+        FROM promotions prom JOIN products prod ON prom.product_id = prod.id
+        ORDER BY prom.timestamp DESC LIMIT ?''', (limit,))
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def record_notification(product_id, url, success, error=None):
+    conn = get_connection()
+    try:
+        conn.execute(
+            """UPDATE promotions
+               SET notified_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE notified_at END,
+                   notification_error = ?
+               WHERE product_id = ? AND url = ?""",
+            (int(success), error, product_id, url),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_statistics():
+    conn = get_connection()
+    try:
+        return {
+            "products": conn.execute("SELECT COUNT(*) FROM products").fetchone()[0],
+            "stores": conn.execute("SELECT COUNT(*) FROM stores").fetchone()[0],
+            "blocked_stores": conn.execute(
+                "SELECT COUNT(*) FROM stores WHERE blocked = 1"
+            ).fetchone()[0],
+            "promotions": conn.execute("SELECT COUNT(*) FROM promotions").fetchone()[0],
+            "matches": conn.execute("SELECT COUNT(*) FROM raw_matches").fetchone()[0],
+        }
+    finally:
+        conn.close()

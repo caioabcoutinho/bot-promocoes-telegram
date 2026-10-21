@@ -2,17 +2,14 @@ import asyncio
 import os
 import aiohttp
 import logging
-from dotenv import load_dotenv
+from src.config import BOT_TOKEN, USER_CHAT_ID
 
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-USER_CHAT_ID = os.getenv("USER_CHAT_ID")
 logger = logging.getLogger(__name__)
 
 async def send_alert(product_name, price, store, url, coupon=None, source=None):
     if not BOT_TOKEN or not USER_CHAT_ID:
         logger.error("BOT_TOKEN ou USER_CHAT_ID faltando")
-        return
+        return False
 
     # Se houver cupom, adiciona a linha no texto
     texto_cupom = f"\n🎟️ **Cupom:** `{coupon}`" if coupon else ""

@@ -24,8 +24,7 @@ notifier -> Telegram Bot API
 
 ### Captura
 
-`run_phase1.py`, `run_phase2.py` e `run_phase3.py` criam clientes Telethon
-independentes e registram handlers equivalentes.
+`run.py` inicia `run_phase3.py` e `run_bot.py` como processos filhos gerenciados.
 
 ### Matching
 
@@ -49,8 +48,6 @@ persiste tentativa/falha de entrega.
 
 ## Inconsistências arquiteturais
 
-- O fluxo de produção depende de escolher manualmente uma fase.
 - O bot de consulta não compartilha o loop de captura.
 - O parser e os consumidores têm contratos divergentes.
 - Configuração, estado e execução não têm uma camada de inicialização única.
-
