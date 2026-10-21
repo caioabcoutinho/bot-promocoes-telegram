@@ -1,4 +1,4 @@
-# PC Promo Monitor
+# Bot Promoções Telegram
 
 Bot self-hosted para monitorar promoções em grupos e canais do Telegram por
 palavras-chave e enviar alertas para o proprietário.
