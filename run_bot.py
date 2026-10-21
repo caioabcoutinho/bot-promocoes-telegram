@@ -1,5 +1,8 @@
 import logging
+import os
+import sys
 from functools import wraps
+from pathlib import Path
 from telethon import TelegramClient, events
 from src.config import API_ID, API_HASH, BOT_TOKEN, USER_CHAT_ID, validate_configuration
 from src.database import (
@@ -17,9 +20,21 @@ from src.database import (
     update_target_price,
 )
 from src.notifier import send_alert
+from src.single_instance import InstanceAlreadyRunningError, SingleInstanceLock
+from src.time_utils import format_database_timestamp
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+if os.environ.get("PC_PROMO_SUPERVISOR") != "1":
+    try:
+        _instance_lock = SingleInstanceLock(
+            Path(__file__).resolve().parent / ".pc-promo-monitor.lock"
+        )
+        _instance_lock.acquire()
+    except InstanceAlreadyRunningError as error:
+        print(f"Não foi possível iniciar o bot: {error}", file=sys.stderr)
+        raise SystemExit(1)
 
 
 def owner_only(handler):
@@ -75,7 +90,7 @@ async def cmd_ofertas(event):
     msg = "🔥 **Últimas Ofertas Encontradas:**\n\n"
     for p in promos:
         promotion_id, name, price, store, url, coupon, data, chat_id, message_id, source_channel, notified_at, notification_error = p
-        data_formatada = f"{data[8:10]}/{data[5:7]} {data[11:16]}"
+        data_formatada = format_database_timestamp(data)
         texto_cupom = f"🎟️ Cupom: `{coupon}`\n" if coupon else ""
         
         origem = f"\n📣 Grupo: {source_channel}" if source_channel else ""

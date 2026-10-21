@@ -7,9 +7,12 @@ import sys
 import time
 from pathlib import Path
 
+from src.single_instance import InstanceAlreadyRunningError, SingleInstanceLock
+
 
 ROOT = Path(__file__).resolve().parent
 CHILDREN = ("run_phase3.py", "run_bot.py")
+LOCK = SingleInstanceLock(ROOT / ".pc-promo-monitor.lock")
 processes = []
 
 
@@ -26,6 +29,13 @@ def main():
     environment = os.environ.copy()
     environment["PYTHONUNBUFFERED"] = "1"
 
+    try:
+        LOCK.acquire()
+    except InstanceAlreadyRunningError as error:
+        print(f"Não foi possível iniciar o bot: {error}", file=sys.stderr)
+        return 1
+
+    environment["PC_PROMO_SUPERVISOR"] = "1"
     signal.signal(signal.SIGINT, stop_children)
     signal.signal(signal.SIGTERM, stop_children)
 
@@ -51,6 +61,7 @@ def main():
         return 0
     finally:
         stop_children()
+        LOCK.release()
 
 
 if __name__ == "__main__":

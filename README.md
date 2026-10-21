@@ -106,6 +106,10 @@ Na primeira execução, o Telethon solicitará telefone, código e, se ativado,
 senha de 2FA. Isso criará `user_session.session`. O bot usa uma sessão separada.
 Nunca publique `.env` ou arquivos `.session`.
 
+Os horários exibidos em `/ofertas` são convertidos para o fuso
+`America/Sao_Paulo` e aparecem com o sufixo `BRT`. O banco mantém os timestamps
+em UTC para evitar diferenças entre sistemas operacionais.
+
 ## Execução manual
 
 ### Entrada recomendada
@@ -231,8 +235,10 @@ o bot no boot, mesmo sem uma sessão gráfica aberta.
 
 - não execute `python run.py` manualmente enquanto o serviço estiver ativo;
 - não execute `run_bot.py` ou `run_phase3.py` em paralelo com `run.py`;
-- duas instâncias usam os mesmos arquivos `.session` e podem causar
-  `sqlite3.OperationalError: database is locked`;
+- o projeto cria `.pc-promo-monitor.lock` e recusa uma segunda instância antes
+  de abrir os arquivos `.session`;
+- se o processo for encerrado abruptamente, um lock antigo é identificado pelo
+  PID e removido automaticamente quando o processo não existir mais;
 - após editar código ou o `.env`, use `restart`;
 - após editar o arquivo `.service`, use `daemon-reload` e depois `restart`.
 

@@ -1,4 +1,7 @@
 import logging
+import os
+import sys
+from pathlib import Path
 from telethon import TelegramClient, events
 from src.config import API_ID, API_HASH, CHANNELS, validate_configuration
 from src.database import (
@@ -13,9 +16,20 @@ from src.database import (
 from src.matcher import find_matching_products
 from src.extractor import identify_store, parse_message
 from src.notifier import send_alert
+from src.single_instance import InstanceAlreadyRunningError, SingleInstanceLock
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+if os.environ.get("PC_PROMO_SUPERVISOR") != "1":
+    try:
+        _instance_lock = SingleInstanceLock(
+            Path(__file__).resolve().parent / ".pc-promo-monitor.lock"
+        )
+        _instance_lock.acquire()
+    except InstanceAlreadyRunningError as error:
+        print(f"Não foi possível iniciar o monitor: {error}", file=sys.stderr)
+        raise SystemExit(1)
 
 validate_configuration()
 init_db()
