@@ -1,0 +1,15 @@
+[Unit]
+Description=Bot Promocoes Telegram
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/bot-promocoes-telegram
+ExecStart=%h/bot-promocoes-telegram/venv/bin/python %h/bot-promocoes-telegram/run.py
+Restart=on-failure
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
